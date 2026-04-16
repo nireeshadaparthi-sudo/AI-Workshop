@@ -1,0 +1,6 @@
+{
+  "name": "IRCC Monitor Pro",
+  "description": "Real-time monitoring system for IRCC updates, Express Entry draws, and immigration policy changes.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
