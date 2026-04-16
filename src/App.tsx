@@ -26,7 +26,6 @@ import { RawData, PipelineOutput, NormalizedUpdate } from './types';
 import { processDataPipeline } from './services/dataService';
 import { AdminPanel } from './components/AdminPanel';
 import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
-import { supabase } from './lib/supabase';
 
 const SAMPLE_DATA: RawData = {
   atom_feed: [
@@ -97,28 +96,13 @@ function Header() {
 function Footer() {
   const [email, setEmail] = useState('');
   const [isSubscribed, setIsSubscribed] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubscribe = async (e: React.FormEvent) => {
+  const handleSubscribe = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email) return;
-
-    setIsSubmitting(true);
-    try {
-      const { error } = await supabase
-        .from('newsletter_subscribers')
-        .insert([{ email, created_at: new Date().toISOString() }]);
-
-      if (error) throw error;
-
+    if (email) {
       setIsSubscribed(true);
       setEmail('');
       setTimeout(() => setIsSubscribed(false), 3000);
-    } catch (err: any) {
-      console.error('Subscription error:', err.message);
-      alert('Failed to subscribe. Please try again later.');
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -171,19 +155,13 @@ function Footer() {
             </div>
             <button 
               type="submit"
-              disabled={isSubscribed || isSubmitting}
+              disabled={isSubscribed}
               className={`w-full py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
                 isSubscribed ? 'bg-accent-green text-white' : 'bg-accent-blue text-white hover:bg-accent-blue/90 shadow-lg shadow-accent-blue/20'
-              } disabled:opacity-70`}
+              }`}
             >
-              {isSubmitting ? (
-                <RefreshCw size={14} className="animate-spin" />
-              ) : isSubscribed ? (
-                <CheckCircle2 size={14} />
-              ) : (
-                <Mail size={14} />
-              )}
-              {isSubmitting ? 'JOINING...' : isSubscribed ? 'SUBSCRIBED' : 'JOIN NEWSLETTER'}
+              {isSubscribed ? <CheckCircle2 size={14} /> : <Mail size={14} />}
+              {isSubscribed ? 'SUBSCRIBED' : 'JOIN NEWSLETTER'}
             </button>
           </form>
         </div>
