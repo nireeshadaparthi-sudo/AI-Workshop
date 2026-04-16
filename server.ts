@@ -6,6 +6,7 @@ import bcrypt from "bcryptjs";
 import { fileURLToPath } from "url";
 import cors from "cors";
 import fs from "fs";
+import { Resend } from 'resend';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -13,6 +14,8 @@ const __dirname = path.dirname(__filename);
 const USERS_FILE = path.join(__dirname, "users.json");
 const JWT_SECRET = process.env.JWT_SECRET || "ircc-monitor-super-secret-key";
 const PORT = 3000;
+
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Helper to load users from file
 const loadUsers = () => {
@@ -248,6 +251,75 @@ async function startServer() {
   // Logout (Client side handles token removal, but we can have an endpoint for logging/blacklisting)
   app.post("/api/logout", (req, res) => {
     res.json({ message: "Logged out successfully" });
+  });
+
+  // --- Newsletter Email Routes ---
+
+  // Send Welcome Email
+  app.post("/api/newsletter/welcome", async (req, res) => {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: "Email is required" });
+
+    try {
+      const data = await resend.emails.send({
+        from: 'IRCC News Tracker <onboarding@resend.dev>',
+        to: email,
+        subject: 'Welcome to IRCC News Tracker',
+        html: `
+          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 12px;">
+            <h1 style="color: #ef4444; margin-bottom: 20px;">Welcome to IRCC News Tracker! 🍁</h1>
+            <p style="font-size: 16px; line-height: 1.5; color: #374151;">
+              Thanks for subscribing to our newsletter. You'll now receive critical updates, policy changes, and Express Entry draw results directly in your inbox.
+            </p>
+            <p style="font-size: 14px; color: #6b7280; margin-top: 30px;">
+              Stay informed, stay ahead.<br/>
+              The IRCC News Tracker Team
+            </p>
+          </div>
+        `,
+      });
+
+      res.json({ success: true, data });
+    } catch (error: any) {
+      console.error("Error sending welcome email:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Send Update to All Subscribers (Admin Only)
+  app.post("/api/newsletter/send-update", isAdmin, async (req, res) => {
+    const { subject, content, subscribers } = req.body;
+    
+    if (!subject || !content || !subscribers || !Array.isArray(subscribers)) {
+      return res.status(400).json({ error: "Missing required fields: subject, content, and subscribers array" });
+    }
+
+    try {
+      // Using Resend Batch sending for efficiency
+      const batchData = subscribers.map((email: string) => ({
+        from: 'IRCC News Tracker <updates@resend.dev>',
+        to: email,
+        subject: subject,
+        html: `
+          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 12px;">
+            <h2 style="color: #3b82f6; margin-bottom: 20px;">${subject}</h2>
+            <div style="font-size: 16px; line-height: 1.6; color: #374151;">
+              ${content}
+            </div>
+            <hr style="margin: 30px 0; border: 0; border-top: 1px solid #e5e7eb;" />
+            <p style="font-size: 12px; color: #9ca3af; text-align: center;">
+              You received this because you are subscribed to IRCC News Tracker updates.
+            </p>
+          </div>
+        `,
+      }));
+
+      const data = await resend.batch.send(batchData);
+      res.json({ success: true, data });
+    } catch (error: any) {
+      console.error("Error sending batch updates:", error);
+      res.status(500).json({ error: error.message });
+    }
   });
 
   // API 404 Handler

@@ -7,7 +7,8 @@ import {
 } from 'lucide-react';
 import { SourceConfig, SourceStatus, PriorityType, RawData } from '../types';
 import { processDataPipeline } from '../services/dataService';
-import { RefreshCw, CheckCircle2 } from 'lucide-react';
+import { RefreshCw, CheckCircle2, Send } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 
 const SAMPLE_DATA: RawData = {
   atom_feed: [
@@ -33,6 +34,15 @@ export const AdminPanel: React.FC = () => {
   const [rawDataInput, setRawDataInput] = useState<string>(JSON.stringify(SAMPLE_DATA, null, 2));
   const [isProcessing, setIsProcessing] = useState(false);
   const [processSuccess, setProcessSuccess] = useState(false);
+  
+  // Newsletter State
+  const [subscribers, setSubscribers] = useState<any[]>([]);
+  const [isSendingUpdate, setIsSendingUpdate] = useState(false);
+  const [updateSuccess, setUpdateSuccess] = useState(false);
+  const [updateForm, setUpdateForm] = useState({
+    subject: '',
+    content: ''
+  });
   
   // Form State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -60,7 +70,59 @@ export const AdminPanel: React.FC = () => {
 
   useEffect(() => {
     fetchSources();
+    fetchSubscribers();
   }, []);
+
+  const fetchSubscribers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('newsletter_subscribers')
+        .select('email');
+      if (error) throw error;
+      setSubscribers(data || []);
+    } catch (err: any) {
+      console.error('Error fetching subscribers:', err.message);
+    }
+  };
+
+  const handleSendUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!updateForm.subject || !updateForm.content || subscribers.length === 0) {
+      alert("Please provide subject, content, and ensure there are subscribers.");
+      return;
+    }
+
+    setIsSendingUpdate(true);
+    setUpdateSuccess(false);
+    try {
+      const token = localStorage.getItem('token'); // Assuming token is stored here
+      const response = await fetch('/api/newsletter/send-update', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          subject: updateForm.subject,
+          content: updateForm.content,
+          subscribers: subscribers.map(s => s.email)
+        })
+      });
+
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.error || 'Failed to send updates');
+      }
+
+      setUpdateSuccess(true);
+      setUpdateForm({ subject: '', content: '' });
+      setTimeout(() => setUpdateSuccess(false), 3000);
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setIsSendingUpdate(false);
+    }
+  };
 
   const handleToggle = async (id: string) => {
     try {
@@ -293,6 +355,62 @@ export const AdminPanel: React.FC = () => {
           className="w-full h-[300px] p-6 font-mono text-sm bg-bg border border-card-border rounded-xl focus:ring-1 focus:ring-accent-blue focus:border-transparent outline-none resize-none text-text-main"
           placeholder='{ "atom_feed": [...], ... }'
         />
+      </div>
+
+      {/* Newsletter Management Section */}
+      <div className="bento-card p-8 mt-12">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-xl font-bold">Newsletter Management</h2>
+            <p className="text-sm text-text-muted mt-1">Send updates to all {subscribers.length} subscribers.</p>
+          </div>
+          <div className="flex items-center gap-4">
+            <button 
+              onClick={fetchSubscribers}
+              className="p-2 text-text-muted hover:text-accent-blue transition-colors"
+              title="Refresh subscriber list"
+            >
+              <RefreshCw size={18} />
+            </button>
+            <button 
+              form="newsletter-form"
+              type="submit"
+              disabled={isSendingUpdate || subscribers.length === 0}
+              className={`px-6 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center gap-2 shadow-lg ${
+                updateSuccess 
+                ? 'bg-accent-green text-white shadow-accent-green/20' 
+                : 'bg-accent-blue text-white hover:bg-accent-blue/90 shadow-accent-blue/20'
+              } disabled:opacity-50`}
+            >
+              {isSendingUpdate ? <RefreshCw className="animate-spin" size={16} /> : updateSuccess ? <CheckCircle2 size={16} /> : <Send size={16} />}
+              {isSendingUpdate ? 'Sending...' : updateSuccess ? 'Sent Successfully!' : 'Send Update to All'}
+            </button>
+          </div>
+        </div>
+
+        <form id="newsletter-form" onSubmit={handleSendUpdate} className="space-y-4">
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Update Subject</label>
+            <input 
+              type="text" 
+              required
+              value={updateForm.subject}
+              onChange={(e) => setUpdateForm({...updateForm, subject: e.target.value})}
+              className="w-full bg-bg border border-card-border rounded-xl py-2.5 px-4 text-sm text-text-main focus:ring-1 focus:ring-accent-blue outline-none"
+              placeholder="e.g. New Express Entry Draw Results - April 2026"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Email Content (HTML supported)</label>
+            <textarea 
+              required
+              value={updateForm.content}
+              onChange={(e) => setUpdateForm({...updateForm, content: e.target.value})}
+              className="w-full h-[200px] p-4 font-sans text-sm bg-bg border border-card-border rounded-xl focus:ring-1 focus:ring-accent-blue focus:border-transparent outline-none resize-none text-text-main"
+              placeholder="Write your update message here... <p>HTML is supported</p>"
+            />
+          </div>
+        </form>
       </div>
 
       {/* Modal */}

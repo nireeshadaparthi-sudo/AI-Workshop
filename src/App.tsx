@@ -26,6 +26,7 @@ import { RawData, PipelineOutput, NormalizedUpdate } from './types';
 import { processDataPipeline } from './services/dataService';
 import { AdminPanel } from './components/AdminPanel';
 import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
+import { supabase } from './lib/supabase';
 
 const SAMPLE_DATA: RawData = {
   atom_feed: [
@@ -96,13 +97,35 @@ function Header() {
 function Footer() {
   const [email, setEmail] = useState('');
   const [isSubscribed, setIsSubscribed] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubscribe = (e: React.FormEvent) => {
+  const handleSubscribe = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (email) {
+    if (!email) return;
+
+    setIsSubmitting(true);
+    try {
+      const { error } = await supabase
+        .from('newsletter_subscribers')
+        .insert([{ email, created_at: new Date().toISOString() }]);
+
+      if (error) throw error;
+
+      // Send welcome email via backend
+      await fetch('/api/newsletter/welcome', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+
       setIsSubscribed(true);
       setEmail('');
       setTimeout(() => setIsSubscribed(false), 3000);
+    } catch (err: any) {
+      console.error('Subscription error:', err.message);
+      alert('Failed to subscribe. Please try again later.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -155,13 +178,19 @@ function Footer() {
             </div>
             <button 
               type="submit"
-              disabled={isSubscribed}
+              disabled={isSubscribed || isSubmitting}
               className={`w-full py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
                 isSubscribed ? 'bg-accent-green text-white' : 'bg-accent-blue text-white hover:bg-accent-blue/90 shadow-lg shadow-accent-blue/20'
-              }`}
+              } disabled:opacity-70`}
             >
-              {isSubscribed ? <CheckCircle2 size={14} /> : <Mail size={14} />}
-              {isSubscribed ? 'SUBSCRIBED' : 'JOIN NEWSLETTER'}
+              {isSubmitting ? (
+                <RefreshCw size={14} className="animate-spin" />
+              ) : isSubscribed ? (
+                <CheckCircle2 size={14} />
+              ) : (
+                <Mail size={14} />
+              )}
+              {isSubmitting ? 'JOINING...' : isSubscribed ? 'SUBSCRIBED' : 'JOIN NEWSLETTER'}
             </button>
           </form>
         </div>
@@ -243,6 +272,16 @@ function Dashboard() {
                       </div>
                       <h3 className="text-sm font-semibold group-hover:text-accent-blue transition-colors">{update.title}</h3>
                       <p className="text-xs text-text-muted mt-1 line-clamp-2 leading-relaxed">{update.short_summary}</p>
+                      {update.url && (
+                        <a 
+                          href={update.url} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-[10px] font-bold text-accent-blue hover:underline flex items-center gap-1 mt-2"
+                        >
+                          SOURCE <ExternalLink size={10} />
+                        </a>
+                      )}
                     </div>
                   ))
                 )}
