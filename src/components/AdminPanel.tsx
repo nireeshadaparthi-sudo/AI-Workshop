@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../contexts/AuthContext';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Plus, Edit2, Trash2, Power, Search, Globe, 
@@ -9,7 +8,6 @@ import {
 import { SourceConfig, SourceStatus, PriorityType } from '../types';
 
 export const AdminPanel: React.FC = () => {
-  const { token } = useAuth();
   const [sources, setSources] = useState<SourceConfig[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -28,9 +26,7 @@ export const AdminPanel: React.FC = () => {
   const fetchSources = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/admin/sources', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      const response = await fetch('/api/admin/sources');
       if (!response.ok) throw new Error('Failed to fetch sources');
       const data = await response.json();
       setSources(data);
@@ -48,8 +44,7 @@ export const AdminPanel: React.FC = () => {
   const handleToggle = async (id: string) => {
     try {
       const response = await fetch(`/api/admin/sources/${id}/toggle`, {
-        method: 'PATCH',
-        headers: { 'Authorization': `Bearer ${token}` }
+        method: 'PATCH'
       });
       if (!response.ok) throw new Error('Toggle failed');
       fetchSources();
@@ -62,8 +57,7 @@ export const AdminPanel: React.FC = () => {
     if (!window.confirm('Are you sure you want to delete this source?')) return;
     try {
       const response = await fetch(`/api/admin/sources/${id}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
+        method: 'DELETE'
       });
       if (!response.ok) throw new Error('Delete failed');
       fetchSources();
@@ -81,8 +75,7 @@ export const AdminPanel: React.FC = () => {
       const response = await fetch(url, {
         method,
         headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}` 
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify(formData)
       });

@@ -23,9 +23,8 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { RawData, PipelineOutput, NormalizedUpdate } from './types';
 import { processDataPipeline } from './services/dataService';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { AuthPage } from './components/AuthPage';
 import { AdminPanel } from './components/AdminPanel';
+import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
 
 const SAMPLE_DATA: RawData = {
   atom_feed: [
@@ -74,12 +73,47 @@ const SAMPLE_DATA: RawData = {
   ]
 };
 
+function Header() {
+  return (
+    <header className="max-w-7xl mx-auto px-6 py-8 flex items-center justify-between">
+      <div className="flex items-center gap-3">
+        <Link to="/" className="text-xl font-bold tracking-tighter flex items-center gap-1">
+          IRCC<span className="text-accent-red">.MONITOR</span>
+        </Link>
+      </div>
+      
+      <div className="flex items-center gap-6">
+        <div className="hidden md:flex items-center gap-2 px-3 py-1 bg-[#14532d] text-[#4ade80] rounded-full border border-[#166534] text-[11px] font-mono font-bold">
+          <span className="w-1.5 h-1.5 bg-[#4ade80] rounded-full animate-pulse" />
+          PIPELINE ACTIVE
+        </div>
+      </div>
+    </header>
+  );
+}
+
+function Footer() {
+  return (
+    <footer className="max-w-7xl mx-auto px-6 py-12 border-t border-card-border mt-12 flex flex-col md:flex-row justify-between items-center gap-6">
+      <div className="flex items-center gap-2 text-text-muted">
+        <TrendingUp size={16} />
+        <span className="text-xs font-bold tracking-widest uppercase">IRCC Monitor Pro v1.0</span>
+      </div>
+      <p className="text-[11px] text-text-muted font-medium">© 2026 IRCC MONITORING SYSTEMS. DATA SOURCED FROM OFFICIAL CHANNELS.</p>
+      <div className="flex gap-6">
+        <a href="#" className="text-[11px] font-bold text-text-muted hover:text-text-main transition-colors">PRIVACY</a>
+        <a href="#" className="text-[11px] font-bold text-text-muted hover:text-text-main transition-colors">TERMS</a>
+        <a href="#" className="text-[11px] font-bold text-text-muted hover:text-text-main transition-colors">API</a>
+      </div>
+    </footer>
+  );
+}
+
 function Dashboard() {
-  const { user, logout } = useAuth();
   const [rawDataInput, setRawDataInput] = useState<string>(JSON.stringify(SAMPLE_DATA, null, 2));
   const [pipelineOutput, setPipelineOutput] = useState<PipelineOutput | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'raw' | 'admin'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'raw'>('dashboard');
 
   const runPipeline = async (data: RawData) => {
     setIsProcessing(true);
@@ -110,42 +144,7 @@ function Dashboard() {
 
   return (
     <div className="min-h-screen bg-bg text-text-main font-sans selection:bg-accent-blue/30">
-      {/* Header */}
-      <header className="max-w-7xl mx-auto px-6 py-8 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="text-xl font-bold tracking-tighter flex items-center gap-1">
-            IRCC<span className="text-accent-red">.MONITOR</span>
-          </div>
-        </div>
-        
-        <div className="flex items-center gap-6">
-          <div className="hidden md:flex items-center gap-2 px-3 py-1 bg-[#14532d] text-[#4ade80] rounded-full border border-[#166534] text-[11px] font-mono font-bold">
-            <span className="w-1.5 h-1.5 bg-[#4ade80] rounded-full animate-pulse" />
-            PIPELINE ACTIVE
-          </div>
-          
-          <div className="flex items-center gap-4 border-l border-card-border pl-6">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-card-border rounded-full flex items-center justify-center text-text-muted">
-                <UserIcon size={16} />
-              </div>
-              <div className="hidden sm:block">
-                <div className="text-[10px] font-bold text-text-muted uppercase tracking-widest leading-none mb-1">
-                  {user?.role === 'admin' ? 'Administrator' : 'Authenticated User'}
-                </div>
-                <div className="text-xs font-bold text-text-main leading-none">{user?.name}</div>
-              </div>
-            </div>
-            <button 
-              onClick={logout}
-              className="p-2 text-text-muted hover:text-accent-red transition-colors"
-              title="Logout"
-            >
-              <LogOut size={18} />
-            </button>
-          </div>
-        </div>
-      </header>
+      <Header />
 
       <main className="max-w-7xl mx-auto px-6 pb-12">
         {/* Tabs */}
@@ -163,14 +162,6 @@ function Dashboard() {
             >
               INGESTION
             </button>
-            {user?.role === 'admin' && (
-              <button 
-                onClick={() => setActiveTab('admin')}
-                className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${activeTab === 'admin' ? 'bg-card-border text-text-main shadow-sm' : 'text-text-muted hover:text-text-main'}`}
-              >
-                ADMIN PANEL
-              </button>
-            )}
           </div>
 
           {activeTab === 'dashboard' && (
@@ -211,6 +202,71 @@ function Dashboard() {
                       </div>
                       <h3 className="text-sm font-semibold group-hover:text-accent-blue transition-colors">{update.title}</h3>
                       <p className="text-xs text-text-muted mt-1 line-clamp-2 leading-relaxed">{update.short_summary}</p>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* Last 7 Days Section (Moved) */}
+            <div className="bento-card lg:col-span-2">
+              <div className="bento-label">
+                <span>Last 7 Days Immigration Updates</span>
+                <span className="text-accent-blue font-bold">{pipelineOutput?.last_7_days?.total_updates || 0} UPDATES</span>
+              </div>
+              
+              {pipelineOutput?.last_7_days?.trend_summary && (
+                <div className="mb-4 p-3 bg-accent-blue/5 border border-accent-blue/20 rounded-xl text-xs text-accent-blue flex items-center gap-3">
+                  <TrendingUp size={16} />
+                  <span className="font-medium">{pipelineOutput.last_7_days.trend_summary}</span>
+                </div>
+              )}
+
+              <div className="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar max-h-[300px]">
+                {pipelineOutput?.last_7_days?.last_7_days_updates.length === 0 ? (
+                  <div className="py-8 text-center text-text-muted italic text-sm">
+                    No updates in last 7 days.
+                  </div>
+                ) : (
+                  pipelineOutput?.last_7_days?.last_7_days_updates.map((update, i) => (
+                    <div 
+                      key={i} 
+                      className={`p-3 rounded-xl border transition-all ${
+                        update === pipelineOutput.last_7_days?.top_update 
+                        ? 'bg-accent-blue/10 border-accent-blue/40' 
+                        : 'bg-white/5 border-card-border'
+                      }`}
+                    >
+                      <div className="flex justify-between items-start mb-1.5">
+                        <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded ${
+                          update.highlight_tag === 'EXPRESS_ENTRY' ? 'bg-accent-blue text-white' :
+                          update.highlight_tag === 'POLICY' ? 'bg-accent-red text-white' :
+                          update.highlight_tag === 'ALERT' ? 'bg-yellow-500 text-black' :
+                          'bg-card-border text-text-muted'
+                        }`}>
+                          {update.highlight_tag}
+                        </span>
+                        <span className="text-[9px] font-mono text-text-muted">
+                          {new Date(update.date).toLocaleDateString()}
+                        </span>
+                      </div>
+                      <h4 className="text-xs font-bold mb-1 line-clamp-1">{update.title}</h4>
+                      <p className="text-[11px] text-text-muted line-clamp-2 mb-2 leading-relaxed">
+                        {update.short_summary}
+                      </p>
+                      <div className="flex justify-between items-center">
+                        <span className="text-[9px] font-bold text-text-muted">SCORE: {update.importance_score}/10</span>
+                        {update.url && (
+                          <a 
+                            href={update.url} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-[9px] font-bold text-accent-blue hover:underline flex items-center gap-1"
+                          >
+                            SOURCE <ExternalLink size={10} />
+                          </a>
+                        )}
+                      </div>
                     </div>
                   ))
                 )}
@@ -261,23 +317,6 @@ function Dashboard() {
               <div className="text-[11px] text-text-muted mt-auto opacity-60">Monthly average decline</div>
             </div>
 
-            {/* Pipeline Status Section */}
-            <div className="bento-card lg:col-span-2">
-              <div className="bento-label">DATA PIPELINE ARCHITECTURE</div>
-              <div className="flex justify-between mt-auto pt-4">
-                {['CLEAN', 'NORM', 'DEDUP', 'RANK', 'OUTPUT'].map((step, i) => (
-                  <div key={step} className="flex flex-col items-center gap-2 flex-1">
-                    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold ${
-                      i === 3 ? 'bg-accent-blue text-white shadow-[0_0_15px_rgba(59,130,246,0.5)]' : 'bg-card-border text-text-muted'
-                    }`}>
-                      0{i + 1}
-                    </div>
-                    <span className="text-[9px] font-bold text-text-muted">{step}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
             {/* Insights Section */}
             <div className="bento-card lg:col-span-2">
               <div className="bento-label">AI INSIGHTS & TRENDS</div>
@@ -289,76 +328,8 @@ function Dashboard() {
                 ))}
               </div>
             </div>
-
-            {/* Last 7 Days Section */}
-            <div className="bento-card lg:col-span-4 mt-4">
-              <div className="bento-label">
-                <span>Last 7 Days Immigration Updates</span>
-                <span className="text-accent-blue font-bold">{pipelineOutput?.last_7_days?.total_updates || 0} UPDATES</span>
-              </div>
-              
-              {pipelineOutput?.last_7_days?.trend_summary && (
-                <div className="mb-6 p-3 bg-accent-blue/5 border border-accent-blue/20 rounded-xl text-xs text-accent-blue flex items-center gap-3">
-                  <TrendingUp size={16} />
-                  <span className="font-medium">{pipelineOutput.last_7_days.trend_summary}</span>
-                </div>
-              )}
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {pipelineOutput?.last_7_days?.last_7_days_updates.length === 0 ? (
-                  <div className="col-span-full py-12 text-center text-text-muted italic text-sm">
-                    No updates in last 7 days.
-                  </div>
-                ) : (
-                  pipelineOutput?.last_7_days?.last_7_days_updates.map((update, i) => (
-                    <div 
-                      key={i} 
-                      className={`p-4 rounded-xl border transition-all hover:scale-[1.02] ${
-                        update === pipelineOutput.last_7_days?.top_update 
-                        ? 'bg-accent-blue/10 border-accent-blue/40 shadow-[0_0_20px_rgba(59,130,246,0.15)]' 
-                        : 'bg-white/5 border-card-border hover:border-text-muted/30'
-                      }`}
-                    >
-                      <div className="flex justify-between items-start mb-2">
-                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
-                          update.highlight_tag === 'EXPRESS_ENTRY' ? 'bg-accent-blue text-white' :
-                          update.highlight_tag === 'POLICY' ? 'bg-accent-red text-white' :
-                          update.highlight_tag === 'ALERT' ? 'bg-yellow-500 text-black' :
-                          'bg-card-border text-text-muted'
-                        }`}>
-                          {update.highlight_tag}
-                        </span>
-                        <span className="text-[10px] font-mono text-text-muted">
-                          {new Date(update.date).toLocaleDateString()}
-                        </span>
-                      </div>
-                      <h4 className="text-sm font-bold mb-2 line-clamp-1">{update.title}</h4>
-                      <p className="text-xs text-text-muted line-clamp-2 mb-3 leading-relaxed">
-                        {update.short_summary}
-                      </p>
-                      <div className="flex justify-between items-center mt-auto pt-2">
-                        <div className="flex items-center gap-1">
-                          <div className="w-1.5 h-1.5 rounded-full bg-accent-green" />
-                          <span className="text-[10px] font-bold text-text-muted">SCORE: {update.importance_score}/10</span>
-                        </div>
-                        {update.url && (
-                          <a 
-                            href={update.url} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="text-[10px] font-bold text-accent-blue hover:underline flex items-center gap-1"
-                          >
-                            SOURCE <ExternalLink size={10} />
-                          </a>
-                        )}
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
           </div>
-        ) : activeTab === 'raw' ? (
+        ) : (
           <div className="bento-card p-8">
             <div className="flex items-center justify-between mb-6">
               <div>
@@ -381,55 +352,33 @@ function Dashboard() {
               placeholder='{ "atom_feed": [...], ... }'
             />
           </div>
-        ) : (
-          <AdminPanel />
         )}
       </main>
 
-      <footer className="max-w-7xl mx-auto px-6 py-12 border-t border-card-border mt-12 flex flex-col md:flex-row justify-between items-center gap-6">
-        <div className="flex items-center gap-2 text-text-muted">
-          <TrendingUp size={16} />
-          <span className="text-xs font-bold tracking-widest uppercase">IRCC Monitor Pro v1.0</span>
-        </div>
-        <p className="text-[11px] text-text-muted font-medium">© 2026 IRCC MONITORING SYSTEMS. DATA SOURCED FROM OFFICIAL CHANNELS.</p>
-        <div className="flex gap-6">
-          <a href="#" className="text-[11px] font-bold text-text-muted hover:text-text-main transition-colors">PRIVACY</a>
-          <a href="#" className="text-[11px] font-bold text-text-muted hover:text-text-main transition-colors">TERMS</a>
-          <a href="#" className="text-[11px] font-bold text-text-muted hover:text-text-main transition-colors">API</a>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }
 
-function AppContent() {
-  const { isAuthenticated, loading } = useAuth();
-  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-bg flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-accent-blue/30 border-t-accent-blue rounded-full animate-spin" />
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return (
-      <AuthPage 
-        mode={authMode} 
-        onToggle={() => setAuthMode(authMode === 'login' ? 'signup' : 'login')} 
-      />
-    );
-  }
-
-  return <Dashboard />;
+function AdminPage() {
+  return (
+    <div className="min-h-screen bg-bg text-text-main font-sans selection:bg-accent-blue/30">
+      <Header />
+      <main className="max-w-7xl mx-auto px-6 pb-12">
+        <AdminPanel />
+      </main>
+      <Footer />
+    </div>
+  );
 }
 
 export default function App() {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Dashboard />} />
+        <Route path="/admin" element={<AdminPage />} />
+      </Routes>
+    </BrowserRouter>
   );
 }

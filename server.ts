@@ -164,11 +164,11 @@ async function startServer() {
 
   // --- Admin Routes ---
 
-  app.get("/api/admin/sources", isAdmin, (req, res) => {
+  app.get("/api/admin/sources", (req, res) => {
     res.json(sources);
   });
 
-  app.post("/api/admin/sources", isAdmin, (req, res) => {
+  app.post("/api/admin/sources", (req, res) => {
     const { name, type, url, priority } = req.body;
     if (!name || !type || !url || !priority) {
       return res.status(400).json({ error: "Missing required fields" });
@@ -189,7 +189,7 @@ async function startServer() {
     res.status(201).json(newSource);
   });
 
-  app.put("/api/admin/sources/:id", isAdmin, (req, res) => {
+  app.put("/api/admin/sources/:id", (req, res) => {
     const { id } = req.params;
     const { name, type, url, priority, status } = req.body;
     
@@ -209,7 +209,7 @@ async function startServer() {
     res.json(sources[index]);
   });
 
-  app.delete("/api/admin/sources/:id", isAdmin, (req, res) => {
+  app.delete("/api/admin/sources/:id", (req, res) => {
     const { id } = req.params;
     const index = sources.findIndex(s => s.id === id);
     if (index === -1) return res.status(404).json({ error: "Source not found" });
@@ -218,7 +218,7 @@ async function startServer() {
     res.json({ message: "Source deleted successfully" });
   });
 
-  app.patch("/api/admin/sources/:id/toggle", isAdmin, (req, res) => {
+  app.patch("/api/admin/sources/:id/toggle", (req, res) => {
     const { id } = req.params;
     const index = sources.findIndex(s => s.id === id);
     if (index === -1) return res.status(404).json({ error: "Source not found" });
