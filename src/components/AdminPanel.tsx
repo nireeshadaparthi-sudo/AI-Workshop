@@ -3,15 +3,36 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   Plus, Edit2, Trash2, Power, Search, Globe, 
   Hash, Link as LinkIcon, AlertCircle, CheckCircle,
-  X, Save, Loader2
+  X, Save, Loader2, Database
 } from 'lucide-react';
-import { SourceConfig, SourceStatus, PriorityType } from '../types';
+import { SourceConfig, SourceStatus, PriorityType, RawData } from '../types';
+import { processDataPipeline } from '../services/dataService';
+import { RefreshCw, CheckCircle2 } from 'lucide-react';
+
+const SAMPLE_DATA: RawData = {
+  atom_feed: [
+    {
+      title: "IRCC increases permanent residence fees effective April 30, 2026",
+      summary: "Immigration, Refugees and Citizenship Canada (IRCC) is increasing fees for all permanent residence applications.",
+      published: "2026-04-10T10:00:00Z",
+      link: "https://www.canada.ca/en/immigration-refugees-citizenship/news/notices.html"
+    }
+  ],
+  express_entry_html_parsed: [],
+  ircc_main_updates: [],
+  social_media_posts: []
+};
 
 export const AdminPanel: React.FC = () => {
   const [sources, setSources] = useState<SourceConfig[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  
+  // Ingestion State
+  const [rawDataInput, setRawDataInput] = useState<string>(JSON.stringify(SAMPLE_DATA, null, 2));
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [processSuccess, setProcessSuccess] = useState(false);
   
   // Form State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -98,6 +119,21 @@ export const AdminPanel: React.FC = () => {
       priority: source.priority
     });
     setIsModalOpen(true);
+  };
+
+  const handleIngest = async () => {
+    setIsProcessing(true);
+    setProcessSuccess(false);
+    try {
+      const parsed = JSON.parse(rawDataInput);
+      await processDataPipeline(parsed);
+      setProcessSuccess(true);
+      setTimeout(() => setProcessSuccess(false), 3000);
+    } catch (e) {
+      alert("Invalid JSON input or processing failed");
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const filteredSources = sources.filter(s => 
@@ -229,6 +265,34 @@ export const AdminPanel: React.FC = () => {
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* Ingestion Section */}
+      <div className="bento-card p-8 mt-12">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-xl font-bold">Manual Data Ingestion</h2>
+            <p className="text-sm text-text-muted mt-1">Paste pre-fetched IRCC data in JSON format to process through the pipeline.</p>
+          </div>
+          <button 
+            onClick={handleIngest}
+            disabled={isProcessing}
+            className={`px-6 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center gap-2 shadow-lg ${
+              processSuccess 
+              ? 'bg-accent-green text-white shadow-accent-green/20' 
+              : 'bg-accent-blue text-white hover:bg-accent-blue/90 shadow-accent-blue/20'
+            } disabled:opacity-50`}
+          >
+            {isProcessing ? <RefreshCw className="animate-spin" size={16} /> : processSuccess ? <CheckCircle2 size={16} /> : <Database size={16} />}
+            {isProcessing ? 'Processing...' : processSuccess ? 'Success!' : 'Process Data'}
+          </button>
+        </div>
+        <textarea 
+          value={rawDataInput}
+          onChange={(e) => setRawDataInput(e.target.value)}
+          className="w-full h-[300px] p-6 font-mono text-sm bg-bg border border-card-border rounded-xl focus:ring-1 focus:ring-accent-blue focus:border-transparent outline-none resize-none text-text-main"
+          placeholder='{ "atom_feed": [...], ... }'
+        />
       </div>
 
       {/* Modal */}

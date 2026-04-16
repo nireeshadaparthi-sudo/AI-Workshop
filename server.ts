@@ -80,7 +80,7 @@ const isAdmin = (req: any, res: any, next: any) => {
 };
 
 async function startServer() {
-  console.log("Starting IRCC Monitor Server...");
+  console.log("Starting IRCC NEWS TRACKER Server...");
   const app = express();
   
   app.use(cors());

@@ -18,7 +18,8 @@ import {
   CheckCircle2,
   Clock,
   LogOut,
-  User as UserIcon
+  User as UserIcon,
+  Mail
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { RawData, PipelineOutput, NormalizedUpdate } from './types';
@@ -78,7 +79,7 @@ function Header() {
     <header className="max-w-7xl mx-auto px-6 py-8 flex items-center justify-between">
       <div className="flex items-center gap-3">
         <Link to="/" className="text-xl font-bold tracking-tighter flex items-center gap-1">
-          IRCC<span className="text-accent-red">.MONITOR</span>
+          IRCC<span className="text-accent-red"> NEWS TRACKER</span>
         </Link>
       </div>
       
@@ -93,27 +94,93 @@ function Header() {
 }
 
 function Footer() {
+  const [email, setEmail] = useState('');
+  const [isSubscribed, setIsSubscribed] = useState(false);
+
+  const handleSubscribe = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (email) {
+      setIsSubscribed(true);
+      setEmail('');
+      setTimeout(() => setIsSubscribed(false), 3000);
+    }
+  };
+
   return (
-    <footer className="max-w-7xl mx-auto px-6 py-12 border-t border-card-border mt-12 flex flex-col md:flex-row justify-between items-center gap-6">
-      <div className="flex items-center gap-2 text-text-muted">
-        <TrendingUp size={16} />
-        <span className="text-xs font-bold tracking-widest uppercase">IRCC Monitor Pro v1.0</span>
+    <footer className="max-w-7xl mx-auto px-6 py-12 border-t border-card-border mt-12">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-12">
+        {/* Column 1: Brand */}
+        <div className="space-y-4">
+          <Link to="/" className="text-xl font-bold tracking-tighter flex items-center gap-1">
+            IRCC<span className="text-accent-red"> NEWS TRACKER</span>
+          </Link>
+          <p className="text-xs text-text-muted leading-relaxed max-w-xs">
+            Real-time intelligence for Canadian immigration. Track draws, policy changes, and news as they happen.
+          </p>
+        </div>
+
+        {/* Column 2: Navigation */}
+        <div>
+          <h4 className="text-[10px] font-bold text-text-muted uppercase tracking-widest mb-6">Navigation</h4>
+          <ul className="space-y-3">
+            <li><Link to="/" className="text-xs text-text-muted hover:text-text-main transition-colors">Dashboard</Link></li>
+          </ul>
+        </div>
+
+        {/* Column 3: Legal */}
+        <div>
+          <h4 className="text-[10px] font-bold text-text-muted uppercase tracking-widest mb-6">Legal</h4>
+          <ul className="space-y-3">
+            <li><a href="#" className="text-xs text-text-muted hover:text-text-main transition-colors">Privacy Policy</a></li>
+            <li><a href="#" className="text-xs text-text-muted hover:text-text-main transition-colors">Terms of Service</a></li>
+            <li><a href="#" className="text-xs text-text-muted hover:text-text-main transition-colors">Disclaimer</a></li>
+          </ul>
+        </div>
+
+        {/* Column 4: Newsletter */}
+        <div>
+          <h4 className="text-[10px] font-bold text-text-muted uppercase tracking-widest mb-6">Newsletter</h4>
+          <p className="text-xs text-text-muted mb-4">Get critical updates delivered to your inbox.</p>
+          <form onSubmit={handleSubscribe} className="space-y-2">
+            <div className="relative">
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" size={14} />
+              <input 
+                type="email" 
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="your@email.com" 
+                className="w-full bg-card-bg border border-card-border rounded-xl py-2.5 pl-9 pr-4 text-xs text-text-main focus:ring-1 focus:ring-accent-blue outline-none transition-all"
+              />
+            </div>
+            <button 
+              type="submit"
+              disabled={isSubscribed}
+              className={`w-full py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
+                isSubscribed ? 'bg-accent-green text-white' : 'bg-accent-blue text-white hover:bg-accent-blue/90 shadow-lg shadow-accent-blue/20'
+              }`}
+            >
+              {isSubscribed ? <CheckCircle2 size={14} /> : <Mail size={14} />}
+              {isSubscribed ? 'SUBSCRIBED' : 'JOIN NEWSLETTER'}
+            </button>
+          </form>
+        </div>
       </div>
-      <p className="text-[11px] text-text-muted font-medium">© 2026 IRCC MONITORING SYSTEMS. DATA SOURCED FROM OFFICIAL CHANNELS.</p>
-      <div className="flex gap-6">
-        <a href="#" className="text-[11px] font-bold text-text-muted hover:text-text-main transition-colors">PRIVACY</a>
-        <a href="#" className="text-[11px] font-bold text-text-muted hover:text-text-main transition-colors">TERMS</a>
-        <a href="#" className="text-[11px] font-bold text-text-muted hover:text-text-main transition-colors">API</a>
+
+      <div className="pt-8 border-t border-card-border flex flex-col md:flex-row justify-between items-center gap-4">
+        <div className="flex items-center gap-2 text-text-muted">
+          <TrendingUp size={16} />
+          <span className="text-[10px] font-bold tracking-widest uppercase">IRCC NEWS TRACKER v1.0</span>
+        </div>
+        <p className="text-[10px] text-text-muted font-medium uppercase tracking-wider">© 2026 IRCC NEWS TRACKER. SOURCED FROM OFFICIAL DATA.</p>
       </div>
     </footer>
   );
 }
 
 function Dashboard() {
-  const [rawDataInput, setRawDataInput] = useState<string>(JSON.stringify(SAMPLE_DATA, null, 2));
   const [pipelineOutput, setPipelineOutput] = useState<PipelineOutput | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'raw'>('dashboard');
 
   const runPipeline = async (data: RawData) => {
     setIsProcessing(true);
@@ -131,15 +198,6 @@ function Dashboard() {
     runPipeline(SAMPLE_DATA);
   }, []);
 
-  const handleIngest = () => {
-    try {
-      const parsed = JSON.parse(rawDataInput);
-      runPipeline(parsed);
-    } catch (e) {
-      alert("Invalid JSON input");
-    }
-  };
-
   const latestDraw = pipelineOutput?.latest_updates.find(u => u.type === 'draw');
 
   return (
@@ -147,37 +205,20 @@ function Dashboard() {
       <Header />
 
       <main className="max-w-7xl mx-auto px-6 pb-12">
-        {/* Tabs */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex gap-1 p-1 bg-card-bg border border-card-border rounded-xl w-fit">
-            <button 
-              onClick={() => setActiveTab('dashboard')}
-              className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${activeTab === 'dashboard' ? 'bg-card-border text-text-main shadow-sm' : 'text-text-muted hover:text-text-main'}`}
-            >
-              DASHBOARD
-            </button>
-            <button 
-              onClick={() => setActiveTab('raw')}
-              className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${activeTab === 'raw' ? 'bg-card-border text-text-main shadow-sm' : 'text-text-muted hover:text-text-main'}`}
-            >
-              INGESTION
-            </button>
-          </div>
-
-          {activeTab === 'dashboard' && (
-            <button 
-              onClick={() => runPipeline(JSON.parse(rawDataInput))}
-              disabled={isProcessing}
-              className="flex items-center gap-2 px-4 py-1.5 bg-card-bg border border-card-border rounded-xl text-xs font-bold text-text-muted hover:text-text-main transition-all disabled:opacity-50"
-            >
-              <RefreshCw size={14} className={isProcessing ? 'animate-spin' : ''} />
-              REFRESH FEED
-            </button>
-          )}
+        {/* Header Actions */}
+        <div className="flex items-center justify-end mb-8">
+          
+          <button 
+            onClick={() => runPipeline(SAMPLE_DATA)}
+            disabled={isProcessing}
+            className="flex items-center gap-2 px-4 py-2 bg-card-bg border border-card-border rounded-xl text-xs font-bold text-text-muted hover:text-text-main transition-all disabled:opacity-50 shadow-sm"
+          >
+            <RefreshCw size={14} className={isProcessing ? 'animate-spin' : ''} />
+            REFRESH FEED
+          </button>
         </div>
 
-        {activeTab === 'dashboard' ? (
-          <div className="bento-grid">
+        <div className="bento-grid">
             {/* Latest Updates Section */}
             <div className="bento-card lg:col-span-2 lg:row-span-2">
               <div className="bento-label">
@@ -329,30 +370,6 @@ function Dashboard() {
               </div>
             </div>
           </div>
-        ) : (
-          <div className="bento-card p-8">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h2 className="text-xl font-bold">Data Ingestion Engine</h2>
-                <p className="text-sm text-text-muted mt-1">Paste pre-fetched IRCC data in JSON format to process through the pipeline.</p>
-              </div>
-              <button 
-                onClick={handleIngest}
-                disabled={isProcessing}
-                className="px-6 py-2.5 bg-accent-blue text-white rounded-xl font-bold text-sm hover:bg-accent-blue/90 transition-colors disabled:opacity-50 flex items-center gap-2 shadow-lg shadow-accent-blue/20"
-              >
-                {isProcessing ? <RefreshCw className="animate-spin" size={16} /> : <CheckCircle2 size={16} />}
-                Process Data
-              </button>
-            </div>
-            <textarea 
-              value={rawDataInput}
-              onChange={(e) => setRawDataInput(e.target.value)}
-              className="w-full h-[400px] p-6 font-mono text-sm bg-bg border border-card-border rounded-xl focus:ring-1 focus:ring-accent-blue focus:border-transparent outline-none resize-none text-text-main"
-              placeholder='{ "atom_feed": [...], ... }'
-            />
-          </div>
-        )}
       </main>
 
       <Footer />
