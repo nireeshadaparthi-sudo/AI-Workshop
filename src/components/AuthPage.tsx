@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { motion } from 'motion/react';
 import { AlertTriangle, LogIn, UserPlus, Mail, Lock, User as UserIcon } from 'lucide-react';
@@ -15,6 +15,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ mode, onToggle }) => {
   const [name, setName] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showDebug, setShowDebug] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,6 +49,9 @@ export const AuthPage: React.FC<AuthPageProps> = ({ mode, onToggle }) => {
       }
 
       if (!response.ok) {
+        if (response.status === 405) {
+          throw new Error(`Server configuration error (405). Please refresh the page and try again. If the issue persists, contact support.`);
+        }
         throw new Error(data.error || 'Authentication failed');
       }
 
@@ -153,13 +157,28 @@ export const AuthPage: React.FC<AuthPageProps> = ({ mode, onToggle }) => {
           </button>
         </form>
 
-        <div className="mt-8 pt-6 border-t border-card-border text-center">
+        <div className="mt-8 pt-6 border-t border-card-border text-center space-y-4">
           <button 
             onClick={onToggle}
-            className="text-xs font-bold text-text-muted hover:text-accent-blue transition-colors"
+            className="text-xs font-bold text-text-muted hover:text-accent-blue transition-colors block w-full"
           >
             {mode === 'login' ? "DON'T HAVE AN ACCOUNT? SIGN UP" : "ALREADY HAVE AN ACCOUNT? SIGN IN"}
           </button>
+
+          <button 
+            onClick={() => setShowDebug(!showDebug)}
+            className="text-[10px] text-text-muted/50 hover:text-text-muted transition-colors uppercase tracking-widest"
+          >
+            {showDebug ? 'Hide Debug Info' : 'Show Debug Info'}
+          </button>
+
+          {showDebug && (
+            <div className="text-left bg-black/20 p-3 rounded-lg font-mono text-[10px] text-text-muted overflow-x-auto">
+              <p>Origin: {window.location.origin}</p>
+              <p>Endpoint: {window.location.origin + (mode === 'login' ? '/auth/login' : '/auth/signup')}</p>
+              <p>Status: <span className="text-green-500">Connected</span></p>
+            </div>
+          )}
         </div>
       </motion.div>
     </div>

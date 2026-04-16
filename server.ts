@@ -5,15 +5,39 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import { fileURLToPath } from "url";
 import cors from "cors";
+import fs from "fs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+const USERS_FILE = path.join(__dirname, "users.json");
 const JWT_SECRET = process.env.JWT_SECRET || "ircc-monitor-super-secret-key";
 const PORT = 3000;
 
-// In-memory stores
-const users: any[] = [];
+// Helper to load users from file
+const loadUsers = () => {
+  try {
+    if (fs.existsSync(USERS_FILE)) {
+      const data = fs.readFileSync(USERS_FILE, "utf-8");
+      return JSON.parse(data);
+    }
+  } catch (err) {
+    console.error("Error loading users:", err);
+  }
+  return [];
+};
+
+// Helper to save users to file
+const saveUsers = (usersList: any[]) => {
+  try {
+    fs.writeFileSync(USERS_FILE, JSON.stringify(usersList, null, 2));
+  } catch (err) {
+    console.error("Error saving users:", err);
+  }
+};
+
+// Initialize users
+let users: any[] = loadUsers();
 const sources: any[] = [
   {
     id: "1",
@@ -71,11 +95,11 @@ async function startServer() {
   // --- API Routes ---
 
   // Signup
-  app.get("/auth/signup", (req, res) => {
+  app.get(["/auth/signup", "/api/signup"], (req, res) => {
     res.status(405).json({ error: "Method Not Allowed. Use POST to signup." });
   });
-  app.post("/auth/signup", async (req, res) => {
-    console.log(`[${new Date().toISOString()}] POST /auth/signup - Body:`, req.body);
+  app.post(["/auth/signup", "/api/signup"], async (req, res) => {
+    console.log(`[${new Date().toISOString()}] POST ${req.url} - Body:`, req.body);
     const { name, email, password } = req.body;
 
     if (!name || !email || !password) {
@@ -96,6 +120,7 @@ async function startServer() {
     };
 
     users.push(newUser);
+    saveUsers(users);
 
     const token = jwt.sign({ userId: newUser.id, email: newUser.email, role: newUser.role }, JWT_SECRET, {
       expiresIn: "1h",
@@ -109,14 +134,15 @@ async function startServer() {
   });
 
   // Login
-  app.get("/auth/login", (req, res) => {
+  app.get(["/auth/login", "/api/login"], (req, res) => {
     res.status(405).json({ error: "Method Not Allowed. Use POST to login." });
   });
   app.get("/auth/status", (req, res) => {
     res.json({ status: "Auth server is up", time: new Date().toISOString() });
   });
-  app.post("/auth/login", async (req, res) => {
-    console.log(`[${new Date().toISOString()}] POST /auth/login - Body:`, req.body);
+
+  app.post(["/auth/login", "/api/login"], async (req, res) => {
+    console.log(`[${new Date().toISOString()}] POST ${req.url} - Body:`, req.body);
     const { email, password } = req.body;
 
     const user = users.find((u) => u.email === email);
