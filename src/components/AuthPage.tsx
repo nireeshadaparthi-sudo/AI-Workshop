@@ -24,6 +24,8 @@ export const AuthPage: React.FC<AuthPageProps> = ({ mode, onToggle }) => {
     const endpoint = mode === 'login' ? '/api/login' : '/api/signup';
     const body = mode === 'login' ? { email, password } : { name, email, password };
 
+    console.log(`Attempting ${mode} request to ${endpoint}`, body);
+
     try {
       const response = await fetch(endpoint, {
         method: 'POST',

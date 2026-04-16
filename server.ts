@@ -55,7 +55,20 @@ const isAdmin = (req: any, res: any, next: any) => {
 };
 
 async function startServer() {
+  console.log("Starting IRCC Monitor Server...");
   const app = express();
+  
+  // CORS and OPTIONS handler
+  app.use((req, res, next) => {
+    res.header("Access-Control-Allow-Origin", "*");
+    res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS");
+    res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
+    if (req.method === "OPTIONS") {
+      return res.sendStatus(200);
+    }
+    next();
+  });
+
   app.use(express.json());
 
   // Request logging
@@ -212,6 +225,12 @@ async function startServer() {
   // API 404 Handler
   app.all("/api/*", (req, res) => {
     res.status(404).json({ error: `API route not found: ${req.method} ${req.url}` });
+  });
+
+  // Global Error Handler
+  app.use((err: any, req: any, res: any, next: any) => {
+    console.error("Unhandled Server Error:", err);
+    res.status(500).json({ error: "Internal Server Error", details: err.message });
   });
 
   // --- Vite Middleware ---
