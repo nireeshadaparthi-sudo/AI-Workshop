@@ -16,11 +16,16 @@ import {
   Database,
   Info,
   CheckCircle2,
-  Clock
+  Clock,
+  LogOut,
+  User as UserIcon
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { RawData, PipelineOutput, NormalizedUpdate } from './types';
 import { processDataPipeline } from './services/dataService';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { AuthPage } from './components/AuthPage';
+import { AdminPanel } from './components/AdminPanel';
 
 const SAMPLE_DATA: RawData = {
   atom_feed: [
@@ -69,11 +74,12 @@ const SAMPLE_DATA: RawData = {
   ]
 };
 
-export default function App() {
+function Dashboard() {
+  const { user, logout } = useAuth();
   const [rawDataInput, setRawDataInput] = useState<string>(JSON.stringify(SAMPLE_DATA, null, 2));
   const [pipelineOutput, setPipelineOutput] = useState<PipelineOutput | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'raw' | 'logs'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'raw' | 'admin'>('dashboard');
 
   const runPipeline = async (data: RawData) => {
     setIsProcessing(true);
@@ -112,36 +118,71 @@ export default function App() {
           </div>
         </div>
         
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-6">
           <div className="hidden md:flex items-center gap-2 px-3 py-1 bg-[#14532d] text-[#4ade80] rounded-full border border-[#166534] text-[11px] font-mono font-bold">
             <span className="w-1.5 h-1.5 bg-[#4ade80] rounded-full animate-pulse" />
-            PIPELINE ACTIVE · SYNCED 2M AGO
+            PIPELINE ACTIVE
           </div>
-          <button 
-            onClick={() => runPipeline(JSON.parse(rawDataInput))}
-            disabled={isProcessing}
-            className="p-2 text-text-muted hover:text-text-main transition-colors disabled:opacity-50"
-          >
-            <RefreshCw size={18} className={isProcessing ? 'animate-spin' : ''} />
-          </button>
+          
+          <div className="flex items-center gap-4 border-l border-card-border pl-6">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-card-border rounded-full flex items-center justify-center text-text-muted">
+                <UserIcon size={16} />
+              </div>
+              <div className="hidden sm:block">
+                <div className="text-[10px] font-bold text-text-muted uppercase tracking-widest leading-none mb-1">
+                  {user?.role === 'admin' ? 'Administrator' : 'Authenticated User'}
+                </div>
+                <div className="text-xs font-bold text-text-main leading-none">{user?.name}</div>
+              </div>
+            </div>
+            <button 
+              onClick={logout}
+              className="p-2 text-text-muted hover:text-accent-red transition-colors"
+              title="Logout"
+            >
+              <LogOut size={18} />
+            </button>
+          </div>
         </div>
       </header>
 
       <main className="max-w-7xl mx-auto px-6 pb-12">
         {/* Tabs */}
-        <div className="flex gap-1 p-1 bg-card-bg border border-card-border rounded-xl w-fit mb-8">
-          <button 
-            onClick={() => setActiveTab('dashboard')}
-            className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${activeTab === 'dashboard' ? 'bg-card-border text-text-main shadow-sm' : 'text-text-muted hover:text-text-main'}`}
-          >
-            DASHBOARD
-          </button>
-          <button 
-            onClick={() => setActiveTab('raw')}
-            className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${activeTab === 'raw' ? 'bg-card-border text-text-main shadow-sm' : 'text-text-muted hover:text-text-main'}`}
-          >
-            INGESTION
-          </button>
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex gap-1 p-1 bg-card-bg border border-card-border rounded-xl w-fit">
+            <button 
+              onClick={() => setActiveTab('dashboard')}
+              className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${activeTab === 'dashboard' ? 'bg-card-border text-text-main shadow-sm' : 'text-text-muted hover:text-text-main'}`}
+            >
+              DASHBOARD
+            </button>
+            <button 
+              onClick={() => setActiveTab('raw')}
+              className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${activeTab === 'raw' ? 'bg-card-border text-text-main shadow-sm' : 'text-text-muted hover:text-text-main'}`}
+            >
+              INGESTION
+            </button>
+            {user?.role === 'admin' && (
+              <button 
+                onClick={() => setActiveTab('admin')}
+                className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${activeTab === 'admin' ? 'bg-card-border text-text-main shadow-sm' : 'text-text-muted hover:text-text-main'}`}
+              >
+                ADMIN PANEL
+              </button>
+            )}
+          </div>
+
+          {activeTab === 'dashboard' && (
+            <button 
+              onClick={() => runPipeline(JSON.parse(rawDataInput))}
+              disabled={isProcessing}
+              className="flex items-center gap-2 px-4 py-1.5 bg-card-bg border border-card-border rounded-xl text-xs font-bold text-text-muted hover:text-text-main transition-all disabled:opacity-50"
+            >
+              <RefreshCw size={14} className={isProcessing ? 'animate-spin' : ''} />
+              REFRESH FEED
+            </button>
+          )}
         </div>
 
         {activeTab === 'dashboard' ? (
@@ -160,11 +201,14 @@ export default function App() {
                 ) : (
                   pipelineOutput?.latest_updates.map((update) => (
                     <div key={update.id} className="py-3 border-b border-card-border last:border-0 group">
-                      <span className={`inline-block text-[10px] px-1.5 py-0.5 rounded font-bold mb-1 ${
-                        update.type === 'draw' ? 'text-accent-blue bg-accent-blue/10' : 'text-accent-green bg-accent-green/10'
-                      }`}>
-                        {update.type.toUpperCase()}
-                      </span>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className={`inline-block text-[10px] px-1.5 py-0.5 rounded font-bold ${
+                          update.type === 'draw' ? 'text-accent-blue bg-accent-blue/10' : 'text-accent-green bg-accent-green/10'
+                        }`}>
+                          {update.type.toUpperCase()}
+                        </span>
+                        <span className="text-[10px] font-mono text-text-muted">{new Date(update.date).toLocaleDateString()}</span>
+                      </div>
                       <h3 className="text-sm font-semibold group-hover:text-accent-blue transition-colors">{update.title}</h3>
                       <p className="text-xs text-text-muted mt-1 line-clamp-2 leading-relaxed">{update.short_summary}</p>
                     </div>
@@ -245,8 +289,76 @@ export default function App() {
                 ))}
               </div>
             </div>
+
+            {/* Last 7 Days Section */}
+            <div className="bento-card lg:col-span-4 mt-4">
+              <div className="bento-label">
+                <span>Last 7 Days Immigration Updates</span>
+                <span className="text-accent-blue font-bold">{pipelineOutput?.last_7_days?.total_updates || 0} UPDATES</span>
+              </div>
+              
+              {pipelineOutput?.last_7_days?.trend_summary && (
+                <div className="mb-6 p-3 bg-accent-blue/5 border border-accent-blue/20 rounded-xl text-xs text-accent-blue flex items-center gap-3">
+                  <TrendingUp size={16} />
+                  <span className="font-medium">{pipelineOutput.last_7_days.trend_summary}</span>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {pipelineOutput?.last_7_days?.last_7_days_updates.length === 0 ? (
+                  <div className="col-span-full py-12 text-center text-text-muted italic text-sm">
+                    No updates in last 7 days.
+                  </div>
+                ) : (
+                  pipelineOutput?.last_7_days?.last_7_days_updates.map((update, i) => (
+                    <div 
+                      key={i} 
+                      className={`p-4 rounded-xl border transition-all hover:scale-[1.02] ${
+                        update === pipelineOutput.last_7_days?.top_update 
+                        ? 'bg-accent-blue/10 border-accent-blue/40 shadow-[0_0_20px_rgba(59,130,246,0.15)]' 
+                        : 'bg-white/5 border-card-border hover:border-text-muted/30'
+                      }`}
+                    >
+                      <div className="flex justify-between items-start mb-2">
+                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
+                          update.highlight_tag === 'EXPRESS_ENTRY' ? 'bg-accent-blue text-white' :
+                          update.highlight_tag === 'POLICY' ? 'bg-accent-red text-white' :
+                          update.highlight_tag === 'ALERT' ? 'bg-yellow-500 text-black' :
+                          'bg-card-border text-text-muted'
+                        }`}>
+                          {update.highlight_tag}
+                        </span>
+                        <span className="text-[10px] font-mono text-text-muted">
+                          {new Date(update.date).toLocaleDateString()}
+                        </span>
+                      </div>
+                      <h4 className="text-sm font-bold mb-2 line-clamp-1">{update.title}</h4>
+                      <p className="text-xs text-text-muted line-clamp-2 mb-3 leading-relaxed">
+                        {update.short_summary}
+                      </p>
+                      <div className="flex justify-between items-center mt-auto pt-2">
+                        <div className="flex items-center gap-1">
+                          <div className="w-1.5 h-1.5 rounded-full bg-accent-green" />
+                          <span className="text-[10px] font-bold text-text-muted">SCORE: {update.importance_score}/10</span>
+                        </div>
+                        {update.url && (
+                          <a 
+                            href={update.url} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-[10px] font-bold text-accent-blue hover:underline flex items-center gap-1"
+                          >
+                            SOURCE <ExternalLink size={10} />
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
           </div>
-        ) : (
+        ) : activeTab === 'raw' ? (
           <div className="bento-card p-8">
             <div className="flex items-center justify-between mb-6">
               <div>
@@ -269,6 +381,8 @@ export default function App() {
               placeholder='{ "atom_feed": [...], ... }'
             />
           </div>
+        ) : (
+          <AdminPanel />
         )}
       </main>
 
@@ -285,5 +399,37 @@ export default function App() {
         </div>
       </footer>
     </div>
+  );
+}
+
+function AppContent() {
+  const { isAuthenticated, loading } = useAuth();
+  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-bg flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-accent-blue/30 border-t-accent-blue rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <AuthPage 
+        mode={authMode} 
+        onToggle={() => setAuthMode(authMode === 'login' ? 'signup' : 'login')} 
+      />
+    );
+  }
+
+  return <Dashboard />;
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }

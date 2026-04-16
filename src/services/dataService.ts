@@ -115,12 +115,87 @@ export async function processDataPipeline(raw: RawData): Promise<PipelineOutput>
   // STEP 8: Final Output
   const globalInsights = await generateGlobalInsights(summarized);
 
+  // STEP 9: Process Last 7 Days Module
+  const last7DaysModule = processLast7DaysUpdates(summarized);
+
   return {
     latest_updates: summarized,
     top_highlights: topHighlights,
     alerts,
     alert_reason: alertReason,
-    insights: globalInsights
+    insights: globalInsights,
+    last_7_days: last7DaysModule
+  };
+}
+
+function processLast7DaysUpdates(updates: NormalizedUpdate[]) {
+  const now = new Date();
+  const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+  // 1. Filter
+  let filtered = updates.filter(u => {
+    const d = new Date(u.date);
+    return !isNaN(d.getTime()) && d >= sevenDaysAgo;
+  });
+
+  // 2. Sort & Prioritize
+  const typePriority: Record<UpdateType, number> = {
+    draw: 5,
+    policy: 4,
+    announcement: 3,
+    news: 2
+  };
+
+  filtered.sort((a, b) => {
+    const dateDiff = new Date(b.date).getTime() - new Date(a.date).getTime();
+    if (Math.abs(dateDiff) > 3600000) return dateDiff; // If more than 1 hour apart, sort by date
+    return typePriority[b.type] - typePriority[a.type];
+  });
+
+  // 3. Enrich & Limit
+  const enriched = filtered.slice(0, 10).map(u => {
+    let tag: "EXPRESS_ENTRY" | "POLICY" | "NEWS" | "ALERT" = "NEWS";
+    if (u.type === 'draw') tag = "EXPRESS_ENTRY";
+    else if (u.type === 'policy') tag = "POLICY";
+    else if (u.alert) tag = "ALERT";
+
+    let score = 5;
+    if (u.type === 'draw') score = 9;
+    else if (u.type === 'policy') score = 8;
+    else if (u.priority === 'high') score = 7;
+
+    return {
+      title: u.title,
+      date: u.date,
+      short_summary: u.short_summary || u.summary.slice(0, 100) + '...',
+      highlight_tag: tag,
+      importance_score: score,
+      url: u.url
+    };
+  });
+
+  // 4. Trend Summary
+  let trend = "Stable immigration activity observed.";
+  const draws = filtered.filter(u => u.type === 'draw');
+  const policies = filtered.filter(u => u.type === 'policy');
+
+  if (draws.length > 1) trend = "High frequency of Express Entry draws detected.";
+  else if (policies.length > 0) trend = "Significant policy activity noted this week.";
+  
+  if (draws.length > 0) {
+    const latestDraw = draws[0];
+    if (latestDraw.key_data.crs_score && latestDraw.key_data.crs_score > 500) {
+      trend += " CRS scores remain elevated.";
+    } else if (latestDraw.key_data.crs_score && latestDraw.key_data.crs_score < 450) {
+      trend += " CRS scores showing downward trend.";
+    }
+  }
+
+  return {
+    last_7_days_updates: enriched,
+    total_updates: filtered.length,
+    top_update: enriched[0] || null,
+    trend_summary: trend
   };
 }
 
