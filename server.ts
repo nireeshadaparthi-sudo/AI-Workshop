@@ -4,6 +4,7 @@ import path from "path";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import { fileURLToPath } from "url";
+import cors from "cors";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -58,17 +59,7 @@ async function startServer() {
   console.log("Starting IRCC Monitor Server...");
   const app = express();
   
-  // CORS and OPTIONS handler
-  app.use((req, res, next) => {
-    res.header("Access-Control-Allow-Origin", "*");
-    res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS");
-    res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
-    if (req.method === "OPTIONS") {
-      return res.sendStatus(200);
-    }
-    next();
-  });
-
+  app.use(cors());
   app.use(express.json());
 
   // Request logging
@@ -80,7 +71,11 @@ async function startServer() {
   // --- API Routes ---
 
   // Signup
-  app.post("/api/signup", async (req, res) => {
+  app.get("/auth/signup", (req, res) => {
+    res.status(405).json({ error: "Method Not Allowed. Use POST to signup." });
+  });
+  app.post("/auth/signup", async (req, res) => {
+    console.log(`[${new Date().toISOString()}] POST /auth/signup - Body:`, req.body);
     const { name, email, password } = req.body;
 
     if (!name || !email || !password) {
@@ -114,7 +109,14 @@ async function startServer() {
   });
 
   // Login
-  app.post("/api/login", async (req, res) => {
+  app.get("/auth/login", (req, res) => {
+    res.status(405).json({ error: "Method Not Allowed. Use POST to login." });
+  });
+  app.get("/auth/status", (req, res) => {
+    res.json({ status: "Auth server is up", time: new Date().toISOString() });
+  });
+  app.post("/auth/login", async (req, res) => {
+    console.log(`[${new Date().toISOString()}] POST /auth/login - Body:`, req.body);
     const { email, password } = req.body;
 
     const user = users.find((u) => u.email === email);

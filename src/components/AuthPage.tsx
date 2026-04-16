@@ -21,17 +21,22 @@ export const AuthPage: React.FC<AuthPageProps> = ({ mode, onToggle }) => {
     setError('');
     setIsLoading(true);
 
-    const endpoint = mode === 'login' ? '/api/login' : '/api/signup';
+    const endpoint = window.location.origin + (mode === 'login' ? '/auth/login' : '/auth/signup');
     const body = mode === 'login' ? { email, password } : { name, email, password };
 
-    console.log(`Attempting ${mode} request to ${endpoint}`, body);
+    console.log(`[AUTH] Mode: ${mode}, URL: ${window.location.href}, Origin: ${window.location.origin}, Endpoint: ${endpoint}`);
 
     try {
       const response = await fetch(endpoint, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
         body: JSON.stringify(body),
       });
+
+      console.log(`[AUTH] Response Status: ${response.status} ${response.statusText}`);
 
       let data;
       const contentType = response.headers.get("content-type");
