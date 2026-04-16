@@ -111,13 +111,6 @@ function Footer() {
 
       if (error) throw error;
 
-      // Send welcome email via backend
-      await fetch('/api/newsletter/welcome', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      });
-
       setIsSubscribed(true);
       setEmail('');
       setTimeout(() => setIsSubscribed(false), 3000);
@@ -272,16 +265,6 @@ function Dashboard() {
                       </div>
                       <h3 className="text-sm font-semibold group-hover:text-accent-blue transition-colors">{update.title}</h3>
                       <p className="text-xs text-text-muted mt-1 line-clamp-2 leading-relaxed">{update.short_summary}</p>
-                      {update.url && (
-                        <a 
-                          href={update.url} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="text-[10px] font-bold text-accent-blue hover:underline flex items-center gap-1 mt-2"
-                        >
-                          SOURCE <ExternalLink size={10} />
-                        </a>
-                      )}
                     </div>
                   ))
                 )}
