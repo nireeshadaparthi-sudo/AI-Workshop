@@ -58,6 +58,12 @@ async function startServer() {
   const app = express();
   app.use(express.json());
 
+  // Request logging
+  app.use((req, res, next) => {
+    console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+    next();
+  });
+
   // --- API Routes ---
 
   // Signup
@@ -201,6 +207,11 @@ async function startServer() {
   // Logout (Client side handles token removal, but we can have an endpoint for logging/blacklisting)
   app.post("/api/logout", (req, res) => {
     res.json({ message: "Logged out successfully" });
+  });
+
+  // API 404 Handler
+  app.all("/api/*", (req, res) => {
+    res.status(404).json({ error: `API route not found: ${req.method} ${req.url}` });
   });
 
   // --- Vite Middleware ---
