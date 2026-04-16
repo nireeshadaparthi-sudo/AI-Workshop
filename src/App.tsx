@@ -243,6 +243,18 @@ function Dashboard() {
                       </div>
                       <h3 className="text-sm font-semibold group-hover:text-accent-blue transition-colors">{update.title}</h3>
                       <p className="text-xs text-text-muted mt-1 line-clamp-2 leading-relaxed">{update.short_summary}</p>
+                      {update.url && (
+                        <div className="mt-2 flex justify-end">
+                          <a 
+                            href={update.url} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-[10px] font-bold text-accent-blue hover:underline flex items-center gap-1"
+                          >
+                            SOURCE <ExternalLink size={10} />
+                          </a>
+                        </div>
+                      )}
                     </div>
                   ))
                 )}
